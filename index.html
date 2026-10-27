@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#fbfaf7">
+  <title>Nuevo balance</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&display=swap" rel="stylesheet">
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root {
+      --verde: #047857;
+      --crema: #fbfaf7;
+      --verde-10: rgba(4, 120, 87, 0.10);
+      --verde-20: rgba(4, 120, 87, 0.20);
+      --verde-60: rgba(4, 120, 87, 0.65);
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; }
+    body {
+      background: var(--crema);
+      color: var(--verde);
+      font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+      font-weight: 500;
+      padding-bottom: 40px;
+      -webkit-tap-highlight-color: transparent;
+    }
+    body.con-panel { padding-bottom: 300px; }
+
+    header { padding: 28px 20px 8px; }
+    h1 { font-weight: 800; font-size: 30px; line-height: 1.15; margin: 0 0 6px; }
+    .sub { margin: 0; color: var(--verde-60); font-size: 15px; }
+
+    .buscador {
+      position: sticky; top: 0; z-index: 5;
+      background: linear-gradient(var(--crema) 80%, rgba(251, 250, 247, 0));
+      padding: 16px 20px 14px;
+    }
+    .campo { position: relative; }
+    .campo svg { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); pointer-events: none; }
+    #buscar {
+      width: 100%; height: 52px; padding: 0 16px 0 46px;
+      font: inherit; font-weight: 500; font-size: 16px; color: var(--verde);
+      background: #fff; border: 2px solid var(--verde-20); border-radius: 16px; outline: none;
+    }
+    #buscar::placeholder { color: var(--verde-60); }
+    #buscar:focus { border-color: var(--verde); }
+    .contador { margin: 10px 4px 0; font-size: 13px; color: var(--verde-60); }
+
+    #lista { list-style: none; margin: 0; padding: 4px 20px 0; display: grid; gap: 10px; }
+    .cliente {
+      width: 100%; text-align: center; font: inherit; color: inherit; cursor: pointer;
+      display: flex; align-items: center; gap: 14px;
+      background: #fff; border: 2px solid var(--verde-10); border-radius: 16px; padding: 14px 16px;
+      transition: background .15s, border-color .15s, color .15s;
+    }
+    .cliente:active { transform: scale(0.99); }
+    .cliente .datos { min-width: 0; flex: 1; }
+    .cliente .nombre { display: block; font-weight: 700; font-size: 16px; line-height: 1.25; overflow-wrap: anywhere; }
+    .cliente .cuit { display: block; margin-top: 3px; font-size: 13px; color: var(--verde-60); }
+    .cliente .tilde { flex: none; width: 22px; height: 22px; opacity: 0; }
+    .cliente[aria-pressed="true"] { background: var(--verde); border-color: var(--verde); color: var(--crema); }
+    .cliente[aria-pressed="true"] .cuit { color: rgba(251, 250, 247, 0.8); }
+    .cliente[aria-pressed="true"] .tilde { opacity: 1; }
+
+    .estado { padding: 36px 24px; text-align: center; color: var(--verde-60); font-size: 15px; }
+    .estado button {
+      margin-top: 14px; font: inherit; font-weight: 700; color: var(--verde); background: none;
+      border: 2px solid var(--verde); border-radius: 12px; padding: 10px 18px; cursor: pointer;
+    }
+    .esqueleto { height: 70px; border-radius: 16px; background: var(--verde-10); animation: pulso 1.2s ease-in-out infinite; }
+    @keyframes pulso { 50% { opacity: .45; } }
+
+    #panel {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+      background: var(--verde); color: var(--crema);
+      border-radius: 28px 28px 0 0; padding: 22px 20px calc(22px + env(safe-area-inset-bottom));
+      box-shadow: 0 -12px 32px rgba(4, 120, 87, 0.25);
+      animation: sube .25s ease-out;
+    }
+    #panel[hidden], #fondo[hidden] { display: none; }
+    #fondo { position: fixed; inset: 0; z-index: 9; background: rgba(4, 120, 87, 0.18); }
+    .panel-cab { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    #cerrar {
+      flex: none; width: 36px; height: 36px; border: 0; border-radius: 50%; cursor: pointer;
+      display: grid; place-items: center; background: rgba(251, 250, 247, 0.18);
+    }
+    #cerrar:active { transform: scale(0.94); }
+    @keyframes sube { from { transform: translateY(30px); opacity: 0; } }
+    .panel-etiqueta { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; opacity: 0.75; }
+    #panel-cliente { margin: 4px 0 16px; font-weight: 800; font-size: 19px; line-height: 1.25; overflow-wrap: anywhere; }
+    #panel label { display: block; margin-bottom: 8px; font-size: 14px; font-weight: 700; }
+    #anio {
+      width: 100%; height: 52px; padding: 0 16px; font: inherit; font-weight: 700; font-size: 16px;
+      color: var(--verde); background: var(--crema); border: 0; border-radius: 14px; outline: none;
+      appearance: none; -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9'%3E%3Cpath d='M1 1l6 6 6-6' fill='none' stroke='%23047857' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 16px center;
+    }
+    #continuar {
+      width: 100%; height: 54px; margin-top: 14px; cursor: pointer;
+      font: inherit; font-weight: 800; font-size: 16px; color: var(--verde);
+      background: var(--crema); border: 0; border-radius: 14px;
+    }
+    #continuar:active { transform: scale(0.99); }
+    #mensaje { margin: 12px 0 0; font-size: 14px; min-height: 18px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Nuevo balance</h1>
+    <p class="sub">Elegí el cliente y el ejercicio.</p>
+  </header>
+
+  <div class="buscador">
+    <div class="campo">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#047857" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <input id="buscar" type="search" placeholder="Buscar por nombre o CUIT" autocomplete="off" aria-label="Buscar cliente">
+    </div>
+    <p class="contador" id="contador"></p>
+  </div>
+
+  <ul id="lista" aria-label="Clientes"></ul>
+
+  <div id="fondo" hidden></div>
+
+  <section id="panel" hidden aria-live="polite">
+    <div class="panel-cab">
+      <p class="panel-etiqueta">Cliente seleccionado</p>
+      <button id="cerrar" type="button" aria-label="Cerrar y deseleccionar cliente">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fbfaf7" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg>
+      </button>
+    </div>
+    <p id="panel-cliente"></p>
+    <label for="anio">Año del ejercicio</label>
+    <select id="anio"></select>
+    <button id="continuar" type="button">Continuar</button>
+    <p id="mensaje"></p>
+  </section>
+
+  <script>
+    const N8N_URL = "https://transdiurnal-unmechanically-boris.ngrok-free.dev/webhook/balance";
+    const ANIOS_CANTIDAD = 6;               // cuántos ejercicios ofrece el desplegable
+    const hoy = new Date().getFullYear();
+
+    const $ = (id) => document.getElementById(id);
+    let clientes = [];
+    let seleccionado = null;
+
+    // Sin tildes y en minúsculas, para que "perez" encuentre "Pérez".
+    const normalizar = (t) => String(t).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+
+    function formatearCuit(valor) {
+      const d = String(valor).replace(/\D/g, "");
+      return d.length === 11 ? `${d.slice(0, 2)}-${d.slice(2, 10)}-${d.slice(10)}` : String(valor);
+    }
+
+    function crearTilde() {
+      const ns = "http://www.w3.org/2000/svg";
+      const svg = document.createElementNS(ns, "svg");
+      svg.setAttribute("viewBox", "0 0 24 24");
+      svg.setAttribute("class", "tilde");
+      svg.setAttribute("aria-hidden", "true");
+      const p = document.createElementNS(ns, "path");
+      p.setAttribute("d", "M5 12.5l4.5 4.5L19 7.5");
+      p.setAttribute("fill", "none");
+      p.setAttribute("stroke", "#fbfaf7");
+      p.setAttribute("stroke-width", "3");
+      p.setAttribute("stroke-linecap", "round");
+      p.setAttribute("stroke-linejoin", "round");
+      svg.appendChild(p);
+      return svg;
+    }
+
+    function dibujarLista() {
+      const texto = normalizar($("buscar").value.trim());
+      const visibles = clientes.filter((c) =>
+        normalizar(c.nombre).includes(texto) || c.cuit.replace(/\D/g, "").includes(texto.replace(/\D/g, "") || "\u0000"));
+      const lista = $("lista");
+      lista.replaceChildren();
+
+      if (visibles.length === 0) {
+        const li = document.createElement("li");
+        li.className = "estado";
+        li.textContent = "No hay clientes que coincidan con la búsqueda.";
+        lista.appendChild(li);
+      }
+      for (const c of visibles) {
+        const li = document.createElement("li");
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "cliente";
+        b.setAttribute("aria-pressed", String(seleccionado?.cuit === c.cuit));
+
+        const datos = document.createElement("span");
+        datos.className = "datos";
+        const nombre = document.createElement("span");
+        nombre.className = "nombre";
+        nombre.textContent = c.nombre;
+        const cuit = document.createElement("span");
+        cuit.className = "cuit";
+        cuit.textContent = "CUIT " + formatearCuit(c.cuit);
+        datos.append(nombre, cuit);
+
+        b.append(datos, crearTilde());
+        b.addEventListener("click", () => elegir(c));
+        li.appendChild(b);
+        lista.appendChild(li);
+      }
+      $("contador").textContent = clientes.length
+        ? `${visibles.length} de ${clientes.length} clientes` : "";
+    }
+
+    function elegir(cliente) {
+      seleccionado = cliente;
+      $("panel-cliente").textContent = cliente.nombre;
+      $("mensaje").textContent = "";
+      $("panel").hidden = false;
+      $("fondo").hidden = false;
+      document.body.classList.add("con-panel");
+      dibujarLista();
+    }
+
+    function cerrarPanel() {
+      seleccionado = null;
+      $("panel").hidden = true;
+      $("fondo").hidden = true;
+      document.body.classList.remove("con-panel");
+      dibujarLista();
+    }
+
+    function llenarAnios() {
+      const sel = $("anio");
+      for (let i = 1; i <= ANIOS_CANTIDAD; i++) {
+        const o = document.createElement("option");
+        o.value = String(hoy - i);          // el primero es el último ejercicio cerrado
+        o.textContent = `Ejercicio ${hoy - i}`;
+        sel.appendChild(o);
+      }
+    }
+
+    function mostrarEsqueleto() {
+      const lista = $("lista");
+      lista.replaceChildren();
+      for (let i = 0; i < 6; i++) {
+        const li = document.createElement("li");
+        li.className = "esqueleto";
+        lista.appendChild(li);
+      }
+    }
+
+    async function cargarClientes() {
+      mostrarEsqueleto();
+      try {
+        const r = await fetch(N8N_URL + "/clientes", {
+            headers: { "ngrok-skip-browser-warning": "1" },
+        });
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        const filas = await r.json();
+        clientes = filas
+          .map((f) => ({ nombre: String(f["Razón Social"] ?? "").trim(), cuit: String(f["CUIT"] ?? "").trim() }))
+          .filter((c) => c.nombre && c.cuit)
+          .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+        dibujarLista();
+      } catch (e) {
+        const lista = $("lista");
+        lista.replaceChildren();
+        const li = document.createElement("li");
+        li.className = "estado";
+        li.textContent = "No pudimos cargar la lista de clientes.";
+        const reintentar = document.createElement("button");
+        reintentar.type = "button";
+        reintentar.textContent = "Reintentar";
+        reintentar.addEventListener("click", cargarClientes);
+        li.appendChild(document.createElement("br"));
+        li.appendChild(reintentar);
+        lista.appendChild(li);
+      }
+    }
+
+    $("buscar").addEventListener("input", dibujarLista);
+    $("cerrar").addEventListener("click", cerrarPanel);
+    $("fondo").addEventListener("click", cerrarPanel);        // tocar fuera del panel
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") cerrarPanel(); });
+
+    let enviado = false;
+
+    $("continuar").addEventListener("click", async () => {
+
+        if (enviado) return;
+
+        const boton = $("continuar");
+
+        boton.disabled = true;
+        boton.textContent = "Enviando…";
+
+        try {
+            const r = await fetch(N8N_URL + "/sesion", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "1" },
+            body: JSON.stringify({ cuit: seleccionado.cuit, anio: Number($("anio").value) }),
+            });
+            const datos = await r.json();
+            if (r.ok && datos.ok) {
+            enviado = true;
+            boton.textContent = "Listo";
+            $("mensaje").textContent = "Te enviamos el enlace por Telegram.";
+            setTimeout(() => window.Telegram?.WebApp?.close(), 1500);
+            } else {
+            $("mensaje").textContent = "No se pudo procesar el pedido.";
+            }
+        } catch (e) {
+            $("mensaje").textContent = "No pudimos conectar con el servidor.";
+        } finally {
+            if (!enviado) {
+            boton.disabled = false;
+            boton.textContent = "Continuar";
+            }
+        }
+        });
+
+    window.Telegram?.WebApp?.ready();
+    window.Telegram?.WebApp?.expand();
+    llenarAnios();
+    cargarClientes();
+  </script>
+</body>
+</html>
